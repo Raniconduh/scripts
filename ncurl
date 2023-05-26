@@ -1,0 +1,32 @@
+#!/bin/sh
+
+line="$1"
+PORT=80
+
+case "$line" in
+	https://* | http://*)
+		line="${line##*://}"
+	;;
+	*://*)
+		echo "Invalid URL type" >&2
+		exit 1
+	;;
+esac
+
+HOST="${line%%/*}"
+HPATH="${line#*/}"
+
+if [ "$HOST" = "$HPATH" ]; then
+	HPATH=''
+fi
+
+HPATH="/$HPATH"
+
+{
+cat << EOF | nc $HOST $PORT
+GET $HPATH HTTP/1.1
+Host: $HOST
+Connection: close
+
+EOF
+} | sed '1,/^\r$/d'
