@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/wait.h>
+#include <signal.h>
+#include <setjmp.h>
 
 #define MAX 6500.
 #define MIN 4200.
@@ -32,12 +34,23 @@ int warms[] = {
 };
 
 
+jmp_buf jmp_env;
+
+void handler(int signo) {
+	(void)(signo+1);
+	siglongjmp(jmp_env, 1);
+}
+
+
 int main() {
 	char buf[5];
 	int hr, mn, fmn;
 	time_t tt;
 	double ratio;
 
+	signal(SIGHUP, handler);
+
+	sigsetjmp(jmp_env, 1);
 	while (1) {
 		/* %H: hour 00-23 */
 		/* %M: min  00-59 */
