@@ -8,3 +8,4 @@
 * [nfy_arg](nfy_arg.sh): Run nfy using command line arguments
 * [nightlight](nightlight.c): Continuously make the screen warmer over time using sct
 * [opener](opener.sh): File opener (xdg-open alternative)
+* [totp](totp.sh): Time-based One Time Pin generator in bash
