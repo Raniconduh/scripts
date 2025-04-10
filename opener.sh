@@ -4,10 +4,11 @@
 
 EDITOR="${EDITOR:-vim}"
 TERMINAL="xterm"
-IMG_OPENER="imgd"
-TTY_BROWSER="lynx"
+IMG_OPENER="feh"
+TTY_BROWSER="links"
 GUI_BROWSER="firefox"
-SPREADSHEETS="sc-im"
+PDF_VIEWER="firefox"
+SPREADSHEETS="false"
 FILE_MANAGER=~/dev/cscroll/cscroll
 
 errX() {
@@ -35,15 +36,18 @@ browser() {
 	if [ -z "$DISPLAY" ]; then
 		run_term "$TTY_BROWSER" "$1"
 	else
-		browser_win="$(xdotool search --onlyvisible --limit 1 --class "$GUI_BROWSER")"
-		if [ -z "$browser_win" ]; then
-			"$GUI_BROWSER" "$1" &
-			return
-		fi
+		"$GUI_BROWSER" "$1"
 
-		xdotool key --window "$browser_win" ctrl+t
-		xdotool type --window "$browser_win" "$1"
-		xdotool key --window "$browser_win" enter
+		# workaround for some browsers
+#		browser_win="$(xdotool search --onlyvisible --limit 1 --class "$GUI_BROWSER")"
+#		if [ -z "$browser_win" ]; then
+#			"$GUI_BROWSER" "$1" &
+#			return
+#		fi
+#
+#		xdotool key --window "$browser_win" ctrl+t
+#		xdotool type --window "$browser_win" "$1"
+#		xdotool key --window "$browser_win" enter
 	fi
 }
 
@@ -77,6 +81,9 @@ case "$(file -b "$(realpath "$1")")" in
 		;;
 	directory)
 		run_term "$FILE_MANAGER" "$1"
+		;;
+	PDF\ *)
+		"$PDF_VIEWER" "$1"
 		;;
 	*)
 		exit 1
