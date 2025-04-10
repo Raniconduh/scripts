@@ -43,10 +43,17 @@ getvol() {
 	iright="${right%%%}"
 
 	if [ $ileft -gt $iright ]; then
-		echo $ileft
+		echo $left
 	else
-		echo $iright
+		echo $right
 	fi
+}
+
+
+getbri() {
+	read bri </sys/class/backlight/intel_backlight/brightness
+	read maxbri </sys/class/backlight/intel_backlight/max_brightness
+	echo "$((bri * 100 / maxbri))"
 }
 
 
@@ -59,6 +66,7 @@ while :; do
 	time="$(gettime)"
 	bat="$(getbat)"
 	batstat="$(getbatstat)"
+	bri="$(getbri)"
 
 	batstatc=
 	case $batstat in
@@ -76,12 +84,12 @@ while :; do
 		if getmute; then
 			vol="="
 		else
-			vol="$(getvol)%"
+			vol="$(getvol)"
 		fi
 	fi
 
-	barline=" VOL: ${vol:-$oldvol} | BAT: ${batstatc}${bat}% | ${time}"
-	xsetroot -name "$barline"
+	barline=" BRI: ${bri}% | VOL: ${vol:-$oldvol} | BAT: ${batstatc}${bat}% | ${time}"
+	xsetroot -name "$barline" || exit
 
 	cnt=$((cnt + 1))
 
