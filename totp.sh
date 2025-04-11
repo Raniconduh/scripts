@@ -25,10 +25,13 @@
 # Yet another minimal TOTP generator
 #
 #/ Usage:
-#/   ./totp <secret>
+#/   ./totp
+#/ Secret taken from stdin
 
 # Taken from github.com/KevCui/totp
 
+read input
+set -- $input
 secret="${1^^}$(printf "%$(( (8-${#1}) % 8 ))s" | tr " " "=")"
 key="$(base32 -d <<< "$secret" \
     | xxd -p \
