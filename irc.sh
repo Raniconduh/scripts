@@ -2,11 +2,14 @@
 # Copyright 2014 Vivien Didelot <vivien@didelot.org>
 # Licensed under the terms of the GNU GPL v3, or any later version.
 
-alias nc='nc'
+#alias nc='nc'
+nc() {
+	openssl s_client -connect $1:$2
+}
 
 NICK=""
 SERVER="irc.libera.chat"
-PORT=6667
+PORT=6697
 CHAN=""
 USER="username hostname servername realname"
 

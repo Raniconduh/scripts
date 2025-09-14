@@ -3,7 +3,7 @@
 emoji="$(sed '1,/^__DATA__$/d' "$0" | dmenu -l 5 -i -p '🔎')"
 
 if [ -z "$emoji" ]; then exit; fi
-xdotool type -delay 30 "$(printf '%s' "$emoji" | awk '{print $1}')" &>/dev/null
+xdotool type -delay 200 "$(printf '%s' "$emoji" | awk '{print $1}')" &>/dev/null
 
 exit
 
