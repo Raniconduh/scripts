@@ -10,6 +10,8 @@
 * [nightlight](nightlight.c): Continuously make the screen warmer over time using sct
 * [opener](opener.sh): File opener (xdg-open alternative)
 * [status](status.sh): `xsetroot` based status bar script
-* [totp](totp.sh): Time-based One Time Pin generator in bash
+* [totp](totp.sh): Time-based One Time Pin generator. Requires openssl, xxd, and base32.
 * [vivado](vivado.sh): Script to run Xilinx Vivado (adaptable to other Xilinx tools)
 * [wifi_pass](wifi_pass.sh): Generate password hashes for use with wpa\_supplicant
+
+Old scripts are archived in [old/](old).
