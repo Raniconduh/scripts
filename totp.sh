@@ -21,31 +21,32 @@
 # shown in the above links has been modified for POSIX shell compatibility and
 # general shell best practice.
 
+TIME=
 
 # Arg 1: string
 # Arg 2: index (1 indexed)
 # Arg 3: length
 # prints the substring
 substr() {
-	start="$2"
-	stop=$(( start + $3 - 1 ))
-	printf '%s' "$1" | cut -b"$start-$stop"
+    start="$2"
+    stop=$(( start + $3 - 1 ))
+    printf '%s' "$1" | cut -b"$start-$stop"
 }
 
 # Arg 1: base32-encoded value, does not need to be padded.
 # Outputs to stdout the raw decoded value.
 base32_decode() {
-	val="$(printf '%s' "$1" | tr '018a-z' 'OIBA-Z')"
-	if [ $(( ${#val} % 8 )) -gt 0 ]; then
-		pad=$(( 8 - ${#val} % 8))
-		i=0
-		while [ $i -lt $pad ]; do
-			val="${val}="
-			i=$(( i + 1 ))
-		done
-	fi
+    val="$(printf '%s' "$1" | tr '018a-z' 'OIBA-Z')"
+    if [ $(( ${#val} % 8 )) -gt 0 ]; then
+        pad=$(( 8 - ${#val} % 8))
+        i=0
+        while [ $i -lt $pad ]; do
+            val="${val}="
+            i=$(( i + 1 ))
+        done
+    fi
 
-	printf '%s' "$val" | base32 -d
+    printf '%s' "$val" | base32 -d
 }
 
 # Arg 1: hash function identifier
@@ -54,16 +55,17 @@ base32_decode() {
 # Outputs result as hex characters, which is the HMAC code.
 # Output length depends on chosen hash function.
 hmac() {
-	hexkey="$(base32_decode "$3" | xxd -p | tr -d '\n')"
-	base32_decode "$2" | \
-		openssl "$1" -hex -mac HMAC -macopt "hexkey:$hexkey" | \
-		cut -d' ' -f2
+    hexkey="$(base32_decode "$3" | xxd -p | tr -d '\n')"
+    base32_decode "$2" | \
+        openssl "$1" -hex -mac HMAC -macopt "hexkey:$hexkey" | \
+        cut -d' ' -f2
 }
 
 totp() {
     totp_period_seconds=30
     key_base32="$1"
-    time_counter=$(( $(date +%s) / totp_period_seconds ))
+    TIME="$(date +'%s')"
+    time_counter=$(( TIME / totp_period_seconds ))
     t_base32="$(printf '%016x' "$time_counter" | xxd -r -p | base32)"
 
     # 40 hexchars (160 bits or 20 bytes):
@@ -71,11 +73,11 @@ totp() {
 
     # extraction offset is lowest/rightmost 4 bits
     # of 160 bit sha1 (multiplied by 2 for hex offset):
-	slice="$(substr "$hmac_hex" 40 1)"
+    slice="$(substr "$hmac_hex" 40 1)"
     hotp_offset=$(( 0x$slice * 2 + 1 ))
 
     # Extract 32 bit unsigned int at offset:
-	slice="$(substr "$hmac_hex" $hotp_offset 8)"
+    slice="$(substr "$hmac_hex" $hotp_offset 8)"
     hotp_code=$(( 0x$slice & 0x7fffffff ))
 
     printf '%06d' $(( hotp_code % 1000000 ))
@@ -83,4 +85,8 @@ totp() {
 
 read -r code
 totp "$code"
-echo
+
+if [ -t 1 ]; then
+    echo
+    echo "$(( 30 - TIME % 30 )) seconds remaining"
+fi
