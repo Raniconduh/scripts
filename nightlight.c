@@ -1,74 +1,146 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
+/* Shift the screen color to more red as the sun sets and back to normal as the
+ * sun rises.
+ *
+ * This program requires the `sunwait` and `sct` commands.
+ */
+
 #include <time.h>
-#include <sys/wait.h>
+#include <math.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stddef.h>
 #include <signal.h>
 #include <setjmp.h>
+#include <sys/wait.h>
 
-#define MAX 6500.
-#define MIN 4200.
-#define DELAY (5 * 60)
+#define TEMP_MIN 4200 /* minimum temperature in Kelvin */
+#define TEMP_MAX 6500 /* maximum temperature in Kelvin */
 
-#define DAY_MAX 1439
+#define WIDTH 40       /* minutes for full transition */
+#define DELAY (60 * 5) /* seconds between updates */
 
+#define TIME(hr, mn) ((hr)*60 + (mn))
+#define DEFAULT_SUNRISE TIME( 7,  0) /* default sunrise; 07:00 */
+#define DEFAULT_SUNSET  TIME(20, 30) /* default sunset;  20:30 */
 
-/* warmness step size */
-#define S (((MAX - MIN) / 16.))
-/* MIN + 16*S == MAX */
+/* -------------- */
 
+#define MIDNIGHT TIME(24, 0)
 
-int warms[] = {
-	/* 0         49        99        149       199        00:00-3:20  */
-	   MIN+0*S,  MIN+0*S,  MIN+0*S,  MIN+0*S,  MIN+0*S,
-	/* 249       299       349       399       449        04:10-7:30  */
-	   MIN+0*S,  MIN+0*S,  MIN+0*S,  MIN+1*S,  MIN+3*S,
-	/* 499       549       599       649       699        08:20-11:40 */
-	   MIN+5*S,  MIN+7*S,  MIN+10*S, MIN+13*S, MIN+16*S,
-	/* 749       799       849       899       949        12:30-15:50 */
-	   MIN+16*S, MIN+16*S, MIN+16*S, MIN+16*S, MIN+16*S,
-	/* 999       1049      1099      1149      1199       16:40-20:00 */
-	   MIN+16*S, MIN+15*S, MIN+13*S, MIN+12*S, MIN+11*S,
-	/* 1249      1299      1349      1399      1449       20:50-24:10 */
-	   MIN+10*S, MIN+9*S,  MIN+6*S,  MIN+3*S,  MIN+-0.6*S,
+/* map 1 to highest temperature and 0 to lowest */
+#define TEMP_FN_(MIN, MAX, CYCLE) ((MIN) + ((MAX) - (MIN)) * (CYCLE))
+#define TEMP_FN(CYCLE) TEMP_FN_(TEMP_MIN, TEMP_MAX, (CYCLE))
+
+enum sun_event {
+	DAY,
+	NIGHT,
 };
 
+sigjmp_buf jmp_env;
 
-jmp_buf jmp_env;
-
-void handler(int signo) {
-	(void)(signo+1);
-	siglongjmp(jmp_env, 1);
+float cycle(int minutes) {
+	float t = minutes / (float)WIDTH;
+	/* curve should satisfy f(t <= 0) = 1 and f(t >= 1) = 0 */
+	if (t < 0.) return 1.;
+	if (t > 1.) return 0.;
+	return 1 - t;
 }
 
+int temp(enum sun_event event, int minutes /* minutes after sunrise/sunset */) {
+	switch (event) {
+		case DAY:
+			return TEMP_FN(1 - cycle(minutes));
+		case NIGHT:
+			return TEMP_FN(cycle(minutes));
+		default:
+			return -1;
+	}
+}
 
-int main() {
-	char buf[5];
-	int hr, mn, fmn;
-	time_t tt;
-	double ratio;
+void suntimes(int * sunrise, int * sunset) {
+	int fds[2];
+	char buf[16];
+	ssize_t len;
+	int riseh, risem, seth, setm;
+	int ret;
 
-	signal(SIGHUP, handler);
-
-	sigsetjmp(jmp_env, 1);
-	while (1) {
-		/* %H: hour 00-23 */
-		/* %M: min  00-59 */
-		tt = time(NULL);
-		strftime(buf, sizeof(buf), "%H%M", localtime(&tt));
-		sscanf(buf, "%2d%2d", &hr, &mn);
-
-		/* minutes since start of day */
-		fmn = hr * 60 + mn;
-
-		ratio = fmn % 50 / 50.;
-		#define AVG(t) (warms[t / 50] * (1 - ratio) + warms[t / 50 + 1] * ratio)
-		sprintf(buf, "%d", (int)AVG(fmn));
-		if (!fork()) execvp("sct", (char*[]){"sct", buf, NULL});
-		wait(NULL);
-
-		sleep(DELAY);
+	pipe(fds);
+	if (!fork()) {
+		dup2(fds[1], STDOUT_FILENO);
+		close(fds[0]);
+		close(fds[1]);
+		execvp("sunwait", (char*const[]){"sunwait", "list", NULL});
+		exit(255);
 	}
 
-	return 0;
+	close(fds[1]);
+	len = read(fds[0], buf, sizeof(buf));
+	if (len > 15) len = 15;
+	buf[len] = 0;
+	close(fds[0]);
+	wait(NULL);
+
+	ret = sscanf(buf, "%02d:%02d, %02d:%02d", &riseh, &risem, &seth, &setm);
+	if (ret != 4) {
+		*sunrise = DEFAULT_SUNRISE;
+		*sunset  = DEFAULT_SUNSET;
+	} else {
+		*sunrise = TIME(riseh, risem);
+		*sunset  = TIME(seth,  setm);
+	}
+}
+
+void sct(int ctemp) {
+	static char buf[16];
+	snprintf(buf, sizeof(buf), "%d", ctemp);
+
+	if (!fork()) {
+		execvp("sct", (char*const[]){"sct", buf, NULL});
+		exit(255);
+	}
+
+	wait(NULL);
+}
+
+void sighandler(int signo) {
+	switch (signo) {
+		case SIGUSR1: siglongjmp(jmp_env, 1);
+		default: break;
+	}
+}
+
+int main(int argc, char ** argv) {
+	int sunrise, sunset, curtime;
+	time_t tt;
+	struct tm * tm;
+	int diff;
+	enum sun_event event;
+
+	signal(SIGUSR1, sighandler);
+	sigsetjmp(jmp_env, 1);
+
+	for (;;) {
+		suntimes(&sunrise, &sunset);
+		tt = time(NULL);
+		tm = localtime(&tt);
+		curtime = TIME(tm->tm_hour, tm->tm_min);
+
+		/* after sunset, before midnight */
+		if (curtime > sunset) {
+			diff = curtime - sunset;
+			event = NIGHT;
+		/* after midnight, before sunrise */
+		} else if (curtime < sunrise) {
+			diff = MIDNIGHT - sunset + curtime;
+			event = NIGHT;
+		/* after sunrise */
+		} else {
+			diff = curtime - sunrise;
+			event = DAY;
+		}
+
+		sct(temp(event, diff));
+		sleep(DELAY);
+	}
 }
