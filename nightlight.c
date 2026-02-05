@@ -24,6 +24,10 @@
 #define DEFAULT_SUNRISE TIME( 7,  0) /* default sunrise; 07:00 */
 #define DEFAULT_SUNSET  TIME(20, 30) /* default sunset;  20:30 */
 
+/* somewhere in rome */
+#define LATITUDE  "41.8905244N"
+#define LONGITUDE "12.4919121E"
+
 /* -------------- */
 
 #define MIDNIGHT TIME(24, 0)
@@ -70,7 +74,7 @@ void suntimes(int * sunrise, int * sunset) {
 		dup2(fds[1], STDOUT_FILENO);
 		close(fds[0]);
 		close(fds[1]);
-		execvp("sunwait", (char*const[]){"sunwait", "list", NULL});
+		execvp("sunwait", (char*const[]){"sunwait", "list", LATITUDE, LONGITUDE, NULL});
 		exit(255);
 	}
 
