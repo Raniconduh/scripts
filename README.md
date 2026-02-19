@@ -1,5 +1,6 @@
 # Index
 
+* [base62](base62.c): Generate a random, base62 encoded string
 * [boolean](boolean.py): Boolean algebra minimizer with Quine-McCluskey method and cover solver
 * [curses_ev](curses_ev.py): Curses event viewer
 * [displays](displays.sh): Display manager for X
