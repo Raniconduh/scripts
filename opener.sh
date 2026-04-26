@@ -10,6 +10,7 @@ GUI_BROWSER="firefox"
 PDF_VIEWER="firefox"
 SPREADSHEETS="false"
 FILE_MANAGER=~/dev/cscroll/cscroll
+VIDEO_PLAYER="ffplay"
 
 errX() {
 	if [ -z "$DISPLAY" ]; then
@@ -30,6 +31,11 @@ run_term() {
 open_img() {
 	errX
 	"$IMG_OPENER" "$1"
+}
+
+open_vid() {
+	errX
+	"$VIDEO_PLAYER" "$1"
 }
 
 browser() {
@@ -69,21 +75,24 @@ if [ ! -e "$1" ]; then
 	esac
 fi
 
-case "$(file -b "$(realpath "$1")")" in
-	*image*)
+case "$(file --mime-type -b "$(realpath "$1")")" in
+	image/*)
 		open_img "$1"
 		;;
-	*ASCII\ text*|*Unicode\ text*|empty)
+	text/*|inode/x-empty)
 		run_term "$EDITOR" "$1"
 		;;
 	*spreadsheet*|*Excel*)
 		run_term "$SPREADSHEETS" "$1"
 		;;
-	directory)
+	inode/directory)
 		run_term "$FILE_MANAGER" "$1"
 		;;
-	PDF\ *)
+	application/pdf)
 		"$PDF_VIEWER" "$1"
+		;;
+	video/*)
+		open_vid "$1"
 		;;
 	*)
 		exit 1
