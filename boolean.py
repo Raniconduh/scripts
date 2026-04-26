@@ -7,6 +7,13 @@ literals = [chr(x) for x in range(ord('a'), ord('z'))] + ['1', '0', '-']
 n_variables = 0
 n_digits = 0
 
+def isint(i):
+    try:
+        x = int(i, base=0)
+        return True
+    except Exception:
+        return False
+
 def justifyL(s: str, n: int):
     return s + ' '*(n - len(s))
 def justifyR(s: str, n: int):
@@ -391,10 +398,10 @@ implicants = inp.split('|')
 minterms = []
 dontcares = []
 
-minterms = [int(i) for i in implicants[0].split(' ') if i.isdigit()]
+minterms = [int(i, base=0) for i in implicants[0].split(' ') if isint(i)]
 minterms.sort()
 if len(implicants) == 2:
-    dontcares = [int(i) for i in implicants[1].split(' ') if i.isdigit()]
+    dontcares = [int(i, base=0) for i in implicants[1].split(' ') if isint(i)]
     dontcares.sort()
 
 implicants = minterms + dontcares
