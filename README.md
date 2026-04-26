@@ -7,6 +7,7 @@
 * [emoji](emoji): Emoji picker using dmenu
 * [imgd](imgd.sh): Image viewer using GraphicksMagick
 * [irc](irc.sh): Small IRC client written in sh
+* [lowbat](lowbat.sh): Send a notification when the battery is low
 * [ncurl](ncurl): HTTP GET client using nc
 * [nfy_arg](nfy_arg.sh): Run nfy using command line arguments
 * [nightlight](nightlight.c): Continuously make the screen warmer over time using sct
