@@ -417,7 +417,10 @@ elif not set(minterms).isdisjoint(set(dontcares)):
     usage(1)
 
 if n_variables == 0:
-    n_variables = math.ceil(log2(implicants[-1]))
+    l = log2(implicants[-1])
+    c = math.ceil(l)
+    if c == l: n_variables = c + 1
+    else: n_variables = c
     n_digits = int(log2(n_variables))
 
 runner = QuineMcCluskey(n_variables, implicants).run()
