@@ -18,7 +18,8 @@
 #define TEMP_MAX 6500 /* maximum temperature in Kelvin */
 
 #define WIDTH 40       /* minutes for full transition */
-#define DELAY (60 * 5) /* seconds between updates */
+#define DELAY (2 * 60 + 30) /* seconds between updates */
+#define FAST_DELAY (DELAY/2) /* seconds between updates when temp is changing */
 
 #define TIME(hr, mn) ((hr)*60 + (mn))
 #define DEFAULT_SUNRISE TIME( 7,  0) /* default sunrise; 07:00 */
@@ -116,6 +117,7 @@ void sighandler(int signo) {
 
 int main(int argc, char ** argv) {
 	int sunrise, sunset, curtime;
+	int next_temp, last_temp = 0;
 	time_t tt;
 	struct tm * tm;
 	int diff;
@@ -144,7 +146,14 @@ int main(int argc, char ** argv) {
 			event = DAY;
 		}
 
-		sct(temp(event, diff));
-		sleep(DELAY);
+		next_temp = temp(event, diff);
+		sct(next_temp);
+
+		if (next_temp != last_temp) {
+			sleep(FAST_DELAY);
+		} else {
+			sleep(DELAY);
+		}
+		last_temp = next_temp;
 	}
 }
